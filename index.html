@@ -1,0 +1,289 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#174d38">
+<title>NutriSense | Personal Health Journal</title>
+<style>
+:root {
+  --green:#174d38; --light:#eaf3ed; --bg:#f5f7f5;
+  --text:#20352a; --muted:#68796f; --white:#fff;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);
+font-family:Arial,sans-serif}
+header{background:var(--green);color:white;padding:22px 18px}
+header h1{margin:0;font-size:25px}
+header p{margin:7px 0 0;font-size:13px;opacity:.9}
+main{max-width:760px;margin:auto;padding:15px}
+.card{background:white;border-radius:14px;padding:16px;
+margin-bottom:14px;box-shadow:0 2px 8px #0000000b}
+h2{font-size:18px;margin:0 0 14px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.stat{background:var(--light);padding:12px;border-radius:10px}
+.stat strong{display:block;font-size:21px;margin-top:5px}
+label{display:block;font-size:13px;margin:11px 0 5px;
+color:var(--muted)}
+input,select{width:100%;padding:11px;border:1px solid #d5ded8;
+border-radius:8px;background:white;font-size:15px;color:var(--text)}
+button{border:0;border-radius:9px;background:var(--green);
+color:white;padding:12px 15px;font-size:14px;font-weight:bold;
+margin-top:13px;cursor:pointer}
+button.secondary{background:#e6eee8;color:var(--green)}
+button.danger{background:#a43c35}
+.full{width:100%}
+.item{padding:12px 0;border-bottom:1px solid #e8eee9}
+.item:last-child{border:0}
+.item small{color:var(--muted)}
+.muted{color:var(--muted);font-size:13px}
+.nav{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.nav button{margin:0;flex:1}
+footer{text-align:center;color:var(--muted);font-size:12px;padding:15px}
+@media(max-width:380px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header>
+<h1>🌿 NutriSense</h1>
+<p>Your personal nutrition, hydration and health journal</p>
+</header>
+
+<main>
+<div class="card">
+<label for="day">Record date</label>
+<input type="date" id="day">
+<div class="muted" style="margin-top:8px">
+Your records are stored locally on this device.
+</div>
+</div>
+
+<div class="nav">
+<button onclick="showSection('dashboard')">Dashboard</button>
+<button onclick="showSection('meal')">Add Meal</button>
+<button onclick="showSection('water')">Water</button>
+<button onclick="showSection('history')">History</button>
+</div>
+
+<section id="dashboard">
+<div class="card">
+<h2>Daily nutrition summary</h2>
+<div class="grid">
+<div class="stat">Calories<strong id="sCal">0 kcal</strong></div>
+<div class="stat">Protein<strong id="sProtein">0 g</strong></div>
+<div class="stat">Carbohydrates<strong id="sCarbs">0 g</strong></div>
+<div class="stat">Fat<strong id="sFat">0 g</strong></div>
+<div class="stat">Fibre<strong id="sFibre">0 g</strong></div>
+<div class="stat">Water<strong id="sWater">0 ml</strong></div>
+</div>
+</div>
+<div class="card">
+<h2>Today's food records</h2>
+<div id="todayMeals" class="muted">No meals recorded yet.</div>
+</div>
+<div class="card">
+<h2>Hydration</h2>
+<div id="todayWater" class="muted">No water recorded yet.</div>
+</div>
+</section>
+
+<section id="meal" hidden>
+<div class="card">
+<h2>Add a meal or food item</h2>
+<form id="mealForm">
+<label>Food / meal name</label>
+<input id="food" required placeholder="e.g. Rice, dal, vegetables">
+<label>Meal category</label>
+<select id="category">
+<option>Breakfast</option><option>Lunch</option>
+<option>Snacks</option><option>Dinner</option><option>Other</option>
+</select>
+<label>Calories (kcal)</label>
+<input id="cal" type="number" min="0" step="0.1" value="0" required>
+<label>Protein (g)</label>
+<input id="protein" type="number" min="0" step="0.1" value="0">
+<label>Carbohydrates (g)</label>
+<input id="carbs" type="number" min="0" step="0.1" value="0">
+<label>Fat (g)</label>
+<input id="fat" type="number" min="0" step="0.1" value="0">
+<label>Fibre (g)</label>
+<input id="fibre" type="number" min="0" step="0.1" value="0">
+<button class="full" type="submit">Save food record</button>
+</form>
+</div>
+</section>
+
+<section id="water" hidden>
+<div class="card">
+<h2>Record water intake</h2>
+<label>Quantity (ml)</label>
+<input id="waterAmount" type="number" min="1" value="250">
+<button class="full" onclick="addWater()">Add water intake</button>
+</div>
+</section>
+
+<section id="history" hidden>
+<div class="card">
+<h2>Food and water history</h2>
+<div id="historyList" class="muted">No records yet.</div>
+<button class="full secondary" onclick="exportCSV()">Export all records to CSV</button>
+<button class="full danger" onclick="clearAll()">Delete all records</button>
+</div>
+</section>
+</main>
+
+<footer>
+NutriSense v0.1 · Personal local-first health journal
+</footer>
+
+<script>
+const KEY = "nutrisense_records_v1";
+let records = JSON.parse(localStorage.getItem(KEY) || "[]");
+
+const $ = id => document.getElementById(id);
+const today = () => new Date().toLocaleDateString("en-CA");
+
+$("day").value = today();
+
+function save() {
+  localStorage.setItem(KEY, JSON.stringify(records));
+  render();
+}
+
+function showSection(name) {
+  ["dashboard","meal","water","history"].forEach(id => {
+    $(id).hidden = id !== name;
+  });
+  render();
+}
+
+function selectedDate() { return $("day").value; }
+
+$("day").addEventListener("change", render);
+
+$("mealForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const item = {
+    id: crypto.randomUUID(),
+    type:"meal",
+    date:selectedDate(),
+    time:new Date().toLocaleTimeString(),
+    food:$("food").value.trim(),
+    category:$("category").value,
+    calories:Number($("cal").value),
+    protein:Number($("protein").value || 0),
+    carbs:Number($("carbs").value || 0),
+    fat:Number($("fat").value || 0),
+    fibre:Number($("fibre").value || 0)
+  };
+  if (!item.food) return;
+  records.push(item);
+  save();
+  $("mealForm").reset();
+  showSection("dashboard");
+});
+
+function addWater() {
+  const amount = Number($("waterAmount").value);
+  if (!amount || amount < 1) {
+    alert("Enter a valid water quantity.");
+    return;
+  }
+  records.push({
+    id:crypto.randomUUID(),
+    type:"water",
+    date:selectedDate(),
+    time:new Date().toLocaleTimeString(),
+    amount
+  });
+  save();
+  showSection("dashboard");
+}
+
+function render() {
+  const date = selectedDate();
+  const dayRecords = records.filter(r => r.date === date);
+  const meals = dayRecords.filter(r => r.type === "meal");
+  const water = dayRecords.filter(r => r.type === "water");
+  const sum = field => meals.reduce((a,r) => a + (r[field] || 0),0);
+  $("sCal").textContent = sum("calories").toFixed(0) + " kcal";
+  $("sProtein").textContent = sum("protein").toFixed(1) + " g";
+  $("sCarbs").textContent = sum("carbs").toFixed(1) + " g";
+  $("sFat").textContent = sum("fat").toFixed(1) + " g";
+  $("sFibre").textContent = sum("fibre").toFixed(1) + " g";
+  $("sWater").textContent =
+    water.reduce((a,r)=>a+r.amount,0) + " ml";
+
+  $("todayMeals").innerHTML = meals.length
+    ? meals.map(r => `<div class="item">
+      <strong>${escapeHTML(r.food)}</strong>
+      <small> · ${escapeHTML(r.category)} · ${r.calories} kcal</small>
+      <br><small>Protein ${r.protein} g | Carbs ${r.carbs} g |
+      Fat ${r.fat} g | Fibre ${r.fibre} g</small>
+      </div>`).join("")
+    : "No meals recorded for this date.";
+
+  $("todayWater").innerHTML = water.length
+    ? water.map(r => `<div class="item">${r.amount} ml
+      <small> · ${r.time}</small></div>`).join("")
+    : "No water recorded for this date.";
+
+  $("historyList").innerHTML = records.length
+    ? [...records].reverse().map(r => r.type === "meal"
+      ? `<div class="item"><strong>${escapeHTML(r.food)}</strong>
+      <br><small>${r.date} · ${r.category} · ${r.calories} kcal</small>
+      <br><button class="danger" onclick="deleteRecord('${r.id}')">Delete</button></div>`
+      : `<div class="item"><strong>Water: ${r.amount} ml</strong>
+      <br><small>${r.date} · ${r.time}</small>
+      <br><button class="danger" onclick="deleteRecord('${r.id}')">Delete</button></div>`
+    ).join("")
+    : "No records available.";
+}
+
+function escapeHTML(value) {
+  return String(value).replace(/[&<>"']/g, c => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",
+    '"':"&quot;","'":"&#39;"
+  }[c]));
+}
+
+function deleteRecord(id) {
+  if (!confirm("Delete this record?")) return;
+  records = records.filter(r => r.id !== id);
+  save();
+}
+
+function clearAll() {
+  if (!confirm("Permanently delete all NutriSense records? Export a backup first.")) return;
+  records = [];
+  save();
+}
+
+function exportCSV() {
+  const rows = [
+    ["Date","Time","Type","Food","Category","Calories_kcal",
+    "Protein_g","Carbohydrates_g","Fat_g","Fibre_g","Water_ml"],
+    ...records.map(r => [
+      r.date,r.time,r.type,r.food || "",r.category || "",
+      r.calories ?? "",r.protein ?? "",r.carbs ?? "",
+      r.fat ?? "",r.fibre ?? "",r.amount ?? ""
+    ])
+  ];
+  const csv = rows.map(row => row.map(v =>
+    '"' + String(v).replace(/"/g,'""') + '"'
+  ).join(",")).join("\r\n");
+  const blob = new Blob(["\uFEFF"+csv],{type:"text/csv;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "NutriSense_records.csv";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+render();
+</script>
+</body>
+  </html>
+  
